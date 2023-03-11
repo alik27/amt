@@ -5,7 +5,7 @@ const { Op } = require("sequelize");
 class ParamsController {
     async create (req, res, next) {
         const {name, value} = req.body
-        if(!name || !value) {
+        if(!name || !value || typeof name !== 'string' || typeof value !== 'string') {
             return next(ApiError.badRequest('Некорректный наименование или значение параметра'))
         }
         const unique = await Params.findOne({where: {name}})
@@ -18,7 +18,7 @@ class ParamsController {
     
     async update (req, res, next) {
         const {name, value} = req.body
-        if(!name || !value) {
+        if(!name || !value || typeof name !== 'string' || typeof value !== 'string') {
             return next(ApiError.badRequest('Некорректный наименование или значение параметра'))
         }
         const unique = await Params.findOne({where: {name, value: {[Op.ne]: value}}})
@@ -34,8 +34,8 @@ class ParamsController {
 
     async delete (req, res, next) {
         const {name} = req.body
-        if(!name) {
-            return next(ApiError.badRequest('Некорректный наименование или значение параметра'))
+        if(!name || typeof name !== 'string') {
+            return next(ApiError.badRequest('Некорректный наименование параметра'))
         }
         const unique = await Params.findOne({where: {name}})
         if(!unique) {
@@ -55,7 +55,7 @@ class ParamsController {
 
     async getOne (req, res, next) {
         const {id} = req.params
-        const params = await Params.findAll({where: {id}})
+        const params = await Params.findOne({where: {id}})
         return res.json(params)
     }
 }
