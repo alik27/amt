@@ -14,7 +14,7 @@ class UserController {
             return next(ApiError.badRequest('Некорректный логин или пароль'))
         }
         const candidate = await User.findOne({where: {login}})
-        if(!candidate) {
+        if(candidate) {
             return next(ApiError.badRequest('Пользователь с таким логином уже существует'))
         }
         const hashPass = await bcrypt.hash(pass,5)
@@ -38,6 +38,7 @@ class UserController {
     }
 
     async check (req, res, next) {
+        const user = req.user
         const token = generateJwt(user.id, user.login, user.role)
         return res.json(token)
     }
