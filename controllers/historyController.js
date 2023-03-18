@@ -1,41 +1,6 @@
-const {History, Params, Checkpoint} = require('../models/models')
+const {History, Params, Checkpoint, HistoryDescription} = require('../models/models')
 const ApiError = require('../error/ApiError')
-const fs = require('fs');
-
-const splitTrim = (id, name, string) => {
-    string = string.split(name)
-    if(!string) return false
-    string = string[id]
-    if(!string) return false
-    return string.trim()
-}
-
-const insertHistory = async (fileContent, element) => {
-    fileContent = fileContent.split('\r\n')
-    fileContent.forEach(async (string) => {
-        if(!string) return false
-        string = string.trim();
-        const date = splitTrim(0, 'number:', string);
-        const number = splitTrim(0, ',', splitTrim(1, 'number:', string));
-        const image = splitTrim(1, 'direction:', string);
-        if (date && number) {
-            const history = await History.findOne({ where: {checkpointId: element.id ,date: date, number: number} });
-            if (!history) {
-                const result = await History.create({checkpointId: element.id ,date: date, number: number, image: image});
-            }
-        }
-    })
-}
-
-const readStreamFile = (checkpoints, stream_path) => {
-    checkpoints.forEach(element => {
-        let fileContent = fs.readFileSync(stream_path.value + '/' + element.name + '/recognition.txt', 'utf8')
-        if (!fileContent) {
-            return next(ApiError.badRequest('Проблема чтения файла'))
-        }
-        insertHistory(fileContent, element)
-    })
-}
+const historyService = require('../service/historyService')
 
 class HistoryController {
     async read (req, res, next) {
@@ -47,8 +12,13 @@ class HistoryController {
         if(!checkpoints) {
             return next(ApiError.badRequest('Не найдены КПП'))
         }
-        readStreamFile(checkpoints, stream_path)
-        return res.json({success: true})
+        await historyService.readStreamFile(checkpoints, stream_path)
+        await HistoryDescription.destroy({
+            truncate: true
+        })
+        const all = await historyService.filterHistory(checkpoints)
+        const result = await HistoryDescription.bulkCreate(all)
+        return res.json({success: result})
     }
 
     async getAll (req, res, next) {

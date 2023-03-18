@@ -1,5 +1,5 @@
 const sequelize = require('../db')
-const { DataTypes } = require('sequelize')
+const { DataTypes, Op } = require('sequelize')
 
 const User = sequelize.define('user', {
     id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
@@ -29,7 +29,7 @@ const History = sequelize.define('history', {
 
 const Description = sequelize.define('description', {
     id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
-    number: {type: DataTypes.STRING, allowNull: false},
+    number: {type: DataTypes.STRING, unique: true, allowNull: false},
     brand: {type: DataTypes.STRING, defaultValue: ''},
     series: {type: DataTypes.STRING, defaultValue: ''},
     pass_number: {type: DataTypes.INTEGER, defaultValue: null},
@@ -44,15 +44,78 @@ const HistoryDescription = sequelize.define('history_description', {
     id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
 })
 
+const Archive = sequelize.define('archive', {
+    id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
+    number: {type: DataTypes.STRING, unique: true, allowNull: false},
+    brand: {type: DataTypes.STRING, defaultValue: ''},
+    series: {type: DataTypes.STRING, defaultValue: ''},
+    pass_number: {type: DataTypes.INTEGER, defaultValue: null},
+    pass_type: {type: DataTypes.STRING, defaultValue: ''},
+    belonging: {type: DataTypes.STRING, defaultValue: ''},
+    name_inventory_items: {type: DataTypes.STRING, defaultValue: ''},
+    weight_inventory_items: {type: DataTypes.INTEGER, defaultValue: null},
+    full_name_inventory_items: {type: DataTypes.STRING, defaultValue: ''},
+    entrance_date: {type: DataTypes.DATE, allowNull: false},
+    entrance_image: {type: DataTypes.STRING, defaultValue: ''},
+    exit_date: {type: DataTypes.DATE, allowNull: false},
+    exit_image: {type: DataTypes.STRING, defaultValue: ''},
+})
+
 Checkpoint.hasMany(History)
 History.belongsTo(Checkpoint)
 
+
 History.hasMany(HistoryDescription)
-HistoryDescription.belongsTo(History)
+HistoryDescription.belongsTo(History, {
+    as: 'entryId',
+    foreignKey: {
+      name: 'historyId',
+      allowNull: true
+    }
+})
+
+HistoryDescription.belongsTo(History, {
+    as: 'exitId',
+    foreignKey: {
+      name: 'historyId_exit',
+      allowNull: true
+    }
+})
 
 Description.hasMany(HistoryDescription)
-HistoryDescription.belongsTo(Description)
+HistoryDescription.belongsTo(Description, {
+    as: 'description',
+    foreignKey: {
+      name: 'descriptionId',
+      allowNull: true
+    }
+})
+
+const hookCheckNumberAll = (description) => {
+    return HistoryDescription.findAndCountAll({
+        attributes: ['id'],
+        raw: true,
+        where: {
+            [Op.and]: [
+                {descriptionId: null},
+                {[Op.or]: [{"$entryId.number$": description.number}, {"$exitId.number$": description.number}]}
+            ]
+        },
+        include: [
+            {model: History, as: "entryId", attributes: [], required: false},
+            {model: History, as: "exitId", attributes: [], required: false}
+        ],
+    })
+}
+
+Description.afterCreate(async description => {
+    const check = await hookCheckNumberAll(description)
+    if(check.count > 0) {
+        return await HistoryDescription.update({descriptionId: description.id}, {where: {[Op.or]: check.rows}})
+    }
+    return false
+})
 
 module.exports = {
-    User, Checkpoint, Params, History, Description, HistoryDescription
+    User, Checkpoint, Params, History, Description, HistoryDescription, Archive
 }
