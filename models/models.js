@@ -46,7 +46,7 @@ const HistoryDescription = sequelize.define('history_description', {
 
 const Archive = sequelize.define('archive', {
     id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
-    number: {type: DataTypes.STRING, unique: true, allowNull: false},
+    number: {type: DataTypes.STRING, allowNull: false},
     brand: {type: DataTypes.STRING, defaultValue: ''},
     series: {type: DataTypes.STRING, defaultValue: ''},
     pass_number: {type: DataTypes.INTEGER, defaultValue: null},
@@ -55,9 +55,9 @@ const Archive = sequelize.define('archive', {
     name_inventory_items: {type: DataTypes.STRING, defaultValue: ''},
     weight_inventory_items: {type: DataTypes.INTEGER, defaultValue: null},
     full_name_inventory_items: {type: DataTypes.STRING, defaultValue: ''},
-    entrance_date: {type: DataTypes.DATE, allowNull: false},
+    entrance_date: {type: DataTypes.DATE, defaultValue: null},
     entrance_image: {type: DataTypes.STRING, defaultValue: ''},
-    exit_date: {type: DataTypes.DATE, allowNull: false},
+    exit_date: {type: DataTypes.DATE, defaultValue: null},
     exit_image: {type: DataTypes.STRING, defaultValue: ''},
 })
 
@@ -91,8 +91,8 @@ HistoryDescription.belongsTo(Description, {
     }
 })
 
-const hookCheckNumberAll = (description) => {
-    return HistoryDescription.findAndCountAll({
+Description.afterCreate(async description => {
+    const check = await HistoryDescription.findAndCountAll({
         attributes: ['id'],
         raw: true,
         where: {
@@ -106,10 +106,6 @@ const hookCheckNumberAll = (description) => {
             {model: History, as: "exitId", attributes: [], required: false}
         ],
     })
-}
-
-Description.afterCreate(async description => {
-    const check = await hookCheckNumberAll(description)
     if(check.count > 0) {
         return await HistoryDescription.update({descriptionId: description.id}, {where: {[Op.or]: check.rows}})
     }
