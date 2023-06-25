@@ -3,7 +3,7 @@ const {History, Description, HistoryDescription} = require('../models/models')
 
 class HistoryDescriptionService {
     async getData () {
-        return await HistoryDescription.findAndCountAll({
+        return await HistoryDescription.findAll({
             attributes: [
                 'id',
                 [Sequelize.literal('entryId.number'), "number"],

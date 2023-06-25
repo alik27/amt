@@ -36,15 +36,15 @@ class DescriptionController {
     }
 
     async delete (req, res, next) {
-        const {id} = req.params
-        if(!id) {
+        const {number} = req.params
+        if(!number) {
             return next(ApiError.badRequest('Некорректный идентификатор описания'))
         }
-        const unique = await Description.findOne({where: {id}})
+        const unique = await Description.findOne({where: {number}})
         if(!unique) {
             return next(ApiError.badRequest('Описание не найдено'))
         }
-        const description = await Description.destroy({where: {id: unique.id}})
+        const description = await Description.destroy({where: {number: unique.number}})
         if(description) {
             return res.json({success: true})
         }
@@ -56,7 +56,7 @@ class DescriptionController {
         page = Number(page) || 1
         limit = Number(limit) || 10
         let offset = page * limit - limit
-        const description = await Description.findAndCountAll({limit, offset})
+        const description = await Description.findAll({limit, offset})
         return res.json(description)
     }
 

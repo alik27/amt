@@ -7,7 +7,7 @@ const descriptionController = require('../controllers/descriptionController')
 router.post('/create', descriptionController.create)
 router.post('/edit', descriptionController.edit)
 
-router.get('/delete/:id', descriptionController.delete)
+router.get('/delete/:number', descriptionController.delete)
 router.get('/', descriptionController.getAll)
 router.get('/:id', descriptionController.getOne)
 

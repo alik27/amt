@@ -1,6 +1,7 @@
 const {History, Params, Checkpoint, HistoryDescription} = require('../models/models')
 const ApiError = require('../error/ApiError')
 const historyService = require('../service/historyService')
+const { Sequelize } = require('../db')
 
 class HistoryController {
     async read (req, res, next) {
@@ -24,9 +25,29 @@ class HistoryController {
     async getAll (req, res, next) {
         let {limit, page} = req.query
         page = Number(page) || 1
-        limit = Number(limit) || 10
+        limit = Number(limit) || 1000
         let offset = page * limit - limit
-        const history = await History.findAndCountAll({limit, offset})
+        const history = await History.findAll({limit, offset,
+            attributes: [
+                'id',
+                'date',
+                'number',
+                'image',
+                'createdAt',
+                'updatedAt',
+                //[Sequelize.literal('checkpoint.type'), "checkpointType"],
+                [Sequelize.literal('checkpoint.name'), "checkpointName"],
+            ],
+            include: [
+                {model: Checkpoint, required: false},
+            ],
+        })
+
+        history.forEach(obj => {
+            let checkpointType = (obj.checkpoint.type == 1 ? "Въезд" : "Выезд")
+            obj.setDataValue('checkpointType', checkpointType);
+        });
+
         return res.json(history)
     }
 
